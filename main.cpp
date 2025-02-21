@@ -55,23 +55,52 @@ int main() {
   //   std::cout << numerator << " * " << num2 << " = " << exp2((int)simplifier) << " * " << remaining << std::endl;
   // }
 
-  Fraction one = 315.0 / 26.0;
-  std::cout << one.toString() << std::endl;
-  std::cout << printPrecise << (double)one << std::endl;
+  // constexpr Fraction cfrac { Fraction { 5 } * 3 };
+  constexpr Fraction cfrac { +((Fraction() * -80) / -15) };
+  constexpr double cdec { 315.0 / 26.0 };
 
-  Fraction result2 = one * 50100060000001;
+  constexpr Fraction one { 26.0 / 315.0 };
+  std::cout << one.toString() << std::endl;
+  std::cout << printPrecise << static_cast<uint64_t>(one) << std::endl;
+
+  constexpr Fraction two = (uint64_t)50100060000001;
+  constexpr Fraction three = -1.0;
+
+  constexpr Fraction result = one / two * three;
+  constexpr Fraction result2 = +result;
   std::cout << result2.toString() << std::endl;
   std::cout << printPrecise << (double)result2 << std::endl;
-  std::cout << printPrecise << (315.0 / 26.0) * 50100060000001 << std::endl;
+  std::cout << printPrecise << (26.0 / 315.0) / 50100060000001 << std::endl;
 
-  std::cout << std::numeric_limits<uint64_t>::max() << std::endl;
-  std::cout << std::numeric_limits<double>::max() << std::endl;
+  constexpr Fraction result3 = +((1 / result) / two);
 
-  double decimal = 1.0/3.0;
-  Fraction frac(decimal);
-  std::cout << frac.toString() << std::endl;
-  std::cout << printPrecise << (double)frac << std::endl;
-  std::cout << printPrecise << decimal << std::endl;
+  constexpr bool same = +result == +result2;
+
+  constexpr uint64_t a = 1912043986730614784;
+  constexpr uint64_t b = 270991224540005409;
+  
+  constexpr uint8_t realIntSize = 8 * sizeof(int) - 1;
+  const uint8_t numeratorOrder = log2(a);
+  const uint8_t denominatorOrder = log2(b);
+
+  const uint8_t simplifier = (numeratorOrder > denominatorOrder ? numeratorOrder : denominatorOrder) - realIntSize;
+  const int modifiedDenominator = static_cast<int>(b >> simplifier);
+  const int modifiedNumerator = static_cast<int>(a >> simplifier);
+  const int r = modifiedNumerator / modifiedDenominator;
+
+  constexpr int simplification = static_cast<int>((result3));
+  std::cout << simplification << std::endl;
+  Fraction modifiable = result;
+  modifiable = modifiable * result;
+
+  // std::cout << std::numeric_limits<uint64_t>::max() << std::endl;
+  // std::cout << std::numeric_limits<double>::max() << std::endl;
+
+  // double decimal = 1.0/3.0;
+  // Fraction frac(decimal);
+  // std::cout << frac.toString() << std::endl;
+  // std::cout << printPrecise << (double)frac << std::endl;
+  // std::cout << printPrecise << decimal << std::endl;
 
 
   // while(true) {
