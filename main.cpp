@@ -75,7 +75,7 @@ int main() {
   std::cout << one.toString() << std::endl;
   std::cout << printPrecise << static_cast<uint64_t>(one) << std::endl;
 
-  constexpr Fraction two = (uint64_t)50100060000001;
+  constexpr Fraction two = { 50100060000001, 1 };
   constexpr Fraction three = -1.0;
 
   constexpr Fraction result = one / two * three;
@@ -84,8 +84,9 @@ int main() {
   std::cout << printPrecise << ((double)result2) << std::endl;
   std::cout << printPrecise << ((26.0 / 315.0) / 50100060000001) << std::endl;
 
+  constexpr double val = (double)result;
   constexpr Fraction result3 = +((1 / result) / two / three);
-  constexpr double val = (double)result3;
+  constexpr double val3 = (double)result3;
 
   constexpr bool same = (result == result2);
 
