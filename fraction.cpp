@@ -1,6 +1,14 @@
-#include "fraction.h"
+#include "fraction.hpp"
 
 #include <cmath>
+
+#include "compiledcalculations/exponentlookup.h"
+
+
+#define leadingZeros __builtin_clzll
+#define trailingZeros __builtin_ctzll
+
+typedef int8_t ssint_t;
 
 
 
@@ -15,13 +23,8 @@ constexpr Fraction::int_t Fraction::exp2(const sint_t power) {
   return (oneInt << power);
 }
 
-constexpr Fraction::sint_t Fraction::log2(int_t n) {
-  sint_t precision = 0;
-  while(n > 0) {
-    n = n >> 1;
-    ++precision;
-  }
-  return precision;
+constexpr Fraction::sint_t Fraction::log2(const int_t n) {
+  return (intSize - leadingZeros(n));
 }
 
 constexpr Fraction::int_t Fraction::gcd(int_t a, int_t b) {
@@ -35,6 +38,8 @@ constexpr Fraction::int_t Fraction::gcd(int_t a, int_t b) {
   }
   return b;
 }
+
+
 
 constexpr Fraction::int_t Fraction::scaledProduct(const int_t x, const int_t y, const sint_t s) {
   // Split 64-bit numbers into 32-bit numbers to prevent overflow when multiplying
@@ -62,6 +67,9 @@ constexpr Fraction::Fraction() : numerator(oneInt), denominator(oneInt), sign(po
 
 constexpr Fraction::Fraction(const int_t n) : numerator(n), denominator(oneInt), sign(positive) {}
 
+constexpr Fraction::Fraction(const int_t numerator, const int_t denominator, bool sign) :
+    numerator(numerator), denominator(denominator), sign(sign ? negative : positive) {}
+
 constexpr Fraction::Fraction(const int n) : numerator(
     static_cast<int_t>(n < 0 ? -n : n)), denominator(oneInt), sign(n < 0 ? negative : positive) {}
 
@@ -80,45 +88,73 @@ constexpr Fraction operator -(const Fraction& obj) {
 }
 
 constexpr Fraction operator *(const Fraction& lhs, const Fraction& rhs) {
-  if(lhs.numerator == Fraction::zeroInt || rhs.numerator == Fraction::zeroInt) {
-    return Fraction { Fraction::zeroInt, Fraction::oneInt, Fraction::positive };
+  if(lhs.numerator == 0 || rhs.numerator == 0) {
+    return Fraction { 0, 1, Fraction::positive };
   }
 
   Fraction result;
-  Fraction::sint_t numeratorOrder = Fraction::log2(lhs.numerator) + Fraction::log2(rhs.numerator) - 1;
-  Fraction::sint_t denominatorOrder = Fraction::log2(lhs.denominator) + Fraction::log2(rhs.denominator) - 1;
-
-  // Calculate the numerator of the resulting fraction
   Fraction::sint_t simplifier = 0;
-  if(numeratorOrder > Fraction::intSize) {
-    simplifier = numeratorOrder - Fraction::intSize + 1;
-    result.numerator = Fraction::scaledProduct(lhs.numerator, rhs.numerator, simplifier);
+  const Fraction::sint_t numeratorOrder = Fraction::log2(lhs.numerator) + Fraction::log2(rhs.numerator) - 1;
+  const Fraction::sint_t denominatorOrder = Fraction::log2(lhs.denominator) + Fraction::log2(rhs.denominator) - 1;
 
-    if(result.denominator == 0) {
-      throw std::overflow_error("Number too big to fit in fraction.");
-    }
+  // Calculate the sign byte
+  if((rhs.sign & Fraction::expBits) == 0 || (lhs.sign & Fraction::expBits) == 0) {
+    // Simplest case because no exponent is stored in one fraction, so the exponent bits
+    // of the other fraction can be written to the result. XOR for sign bit calculation.
+    result.sign == rhs.sign ^ lhs.sign;
   }
   else {
+    // Here we can use the lookup tables in exponentlookup.h to quickly compute the sum
+    const int sum = ExponentLookup::direct[rhs.sign & Fraction::expBits] +
+        ExponentLookup::direct[lhs.sign & Fraction::expBits];
+    const uint8_t expSum = ExponentLookup::inverse[abs(sum)];
+    if(expSum > Fraction::expValueBits) {
+      // The summed exponent doesn't fit in the sign byte
+      if(sum < 0) {
+        result.sign = Fraction::positive;
+        result.numerator = 0Ui64;
+      }
+      else {
+        result.sign = ((rhs.sign ^ lhs.sign) & Fraction::signBit) | Fraction::infinity;
+      }
+      return result;
+    }
+    // The summed exponent fits in the sign byte
+    result.sign = (sum < 0 ? Fraction::expNegative : Fraction::positive) |
+        ((rhs.sign ^ lhs.sign) & Fraction::signBit) | expSum;
+    simplifier = ExponentLookup::remainder[abs(sum)];
+  }
+
+  // Calculate the numerator of the resulting fraction
+  if(numeratorOrder <= Fraction::intSize) {
     result.numerator = lhs.numerator * rhs.numerator;
+  }
+  else {
+    simplifier = numeratorOrder - Fraction::intSize + 1;
+    result.numerator = Fraction::scaledProduct(lhs.numerator, rhs.numerator, simplifier);
   }
 
   // Calculate the denominator of the resulting fraction
-  if(denominatorOrder > Fraction::intSize + simplifier) {
-    // Fraction must be simplified further before multiplication
-    Fraction::sint_t denominatorSimplifier = denominatorOrder - (Fraction::intSize + simplifier) + 1;
-    result.denominator = Fraction::scaledProduct(lhs.denominator, rhs.denominator, denominatorSimplifier);
-    // Update numerator with the simplifier shift
-    result.numerator = (result.numerator >> denominatorSimplifier);
+  if(denominatorOrder <= Fraction::intSize) {
+    if(simplifier == 0) {
+      result.denominator = lhs.denominator * rhs.denominator;
+    }
+    else {
+      result.denominator = (lhs.denominator * rhs.denominator) >> simplifier;
+    }
   }
-  else if(denominatorOrder > Fraction::intSize) {
+  else if(denominatorOrder <= Fraction::intSize + simplifier) {
     // Fraction doesn't need further simplification, but scaledProduct must be used to prevent overflow
     result.denominator = Fraction::scaledProduct(lhs.denominator, rhs.denominator, simplifier);
   }
-  else if(simplifier != 0) {
-    result.denominator = (lhs.denominator * rhs.denominator) >> simplifier;
-  }
   else {
-    result.denominator = lhs.denominator * rhs.denominator;
+    // Fraction must be simplified further before multiplication
+    Fraction::sint_t denominatorSimplifier = denominatorOrder - (Fraction::intSize + simplifier) + 1;
+    result.denominator = Fraction::scaledProduct(lhs.denominator, rhs.denominator, simplifier + denominatorSimplifier);
+    
+    // Update numerator with the simplifier shift
+    Fraction::sint_t exponent = (result.sign & Fraction::expBits);
+    result.numerator = (result.numerator >> denominatorSimplifier);
   }
 
   result.sign = (lhs.sign & Fraction::signBit) ^ (rhs.sign & Fraction::signBit);
@@ -156,10 +192,10 @@ constexpr Fraction::operator int() const {
   const sint_t numeratorOrder = log2(numerator);
   const sint_t denominatorOrder = log2(denominator);
   if(numeratorOrder > realIntSize || denominatorOrder > realIntSize) {
-    const sint_t simplifier = (numeratorOrder > denominatorOrder ? numeratorOrder : denominatorOrder) - realIntSize;
+    const sint_t simplifier = __max(numeratorOrder, denominatorOrder) - realIntSize;
     const int modifiedDenominator = static_cast<int>(denominator >> simplifier);
 
-    if(modifiedDenominator == zeroInt) {
+    if(modifiedDenominator == 0) {
       throw std::overflow_error("Fraction is too large to be expressed as an int.");
     }
     return ((sign & signBit) ? -1 : 1) * (static_cast<int>(numerator >> simplifier) / modifiedDenominator);

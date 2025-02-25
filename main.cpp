@@ -3,7 +3,7 @@
 #include <bitset>
 #include <limits>
 
-#include "fraction.cpp"
+#include "recurrence.cpp"
 
 #define printPrecise std::fixed << std::setprecision(std::numeric_limits<double>::max_digits10)
 
@@ -21,8 +21,20 @@ constexpr uint8_t log2(uint64_t n) {
   return precision;
 }
 
+constexpr Fraction nextTerm(const Fraction& nMinusOne, const Fraction& nMinusTwo, const int n) {
+  return Fraction();
+}
+
 
 int main() {
+  // constexpr Fraction zero { 0 };
+  // constexpr Fraction one { 1 };
+
+  // constexpr RecursiveSeries series(&nextTerm, zero, one);
+
+  // const int n = series.getN();
+  // const Fraction term = series.getTerm();
+
   // constexpr uint64_t rightHalf = 0x00000000ffffffff;
   // constexpr uint64_t leftHalf  = 0xffffffff00000000;
   // const uint64_t numerator = exp2(40);
@@ -69,29 +81,32 @@ int main() {
   constexpr Fraction result = one / two * three;
   constexpr Fraction result2 = +result;
   std::cout << result2.toString() << std::endl;
-  std::cout << printPrecise << (double)result2 << std::endl;
-  std::cout << printPrecise << (26.0 / 315.0) / 50100060000001 << std::endl;
+  std::cout << printPrecise << ((double)result2) << std::endl;
+  std::cout << printPrecise << ((26.0 / 315.0) / 50100060000001) << std::endl;
 
-  constexpr Fraction result3 = +((1 / result) / two);
+  constexpr Fraction result3 = +((1 / result) / two / three);
+  constexpr double val = (double)result3;
 
-  constexpr bool same = +result == +result2;
+  constexpr bool same = (result == result2);
 
-  constexpr uint64_t a = 1912043986730614784;
-  constexpr uint64_t b = 270991224540005409;
+  // constexpr uint64_t a = 1912043986730614784;
+  // constexpr uint64_t b = 270991224540005409;
+
+  // constexpr bool c = b;
   
-  constexpr uint8_t realIntSize = 8 * sizeof(int) - 1;
-  const uint8_t numeratorOrder = log2(a);
-  const uint8_t denominatorOrder = log2(b);
+  // constexpr uint8_t realIntSize = 8 * sizeof(int) - 1;
+  // const uint8_t numeratorOrder = log2(a);
+  // const uint8_t denominatorOrder = log2(b);
 
-  const uint8_t simplifier = (numeratorOrder > denominatorOrder ? numeratorOrder : denominatorOrder) - realIntSize;
-  const int modifiedDenominator = static_cast<int>(b >> simplifier);
-  const int modifiedNumerator = static_cast<int>(a >> simplifier);
-  const int r = modifiedNumerator / modifiedDenominator;
+  // const uint8_t simplifier = (numeratorOrder > denominatorOrder ? numeratorOrder : denominatorOrder) - realIntSize;
+  // const int modifiedDenominator = static_cast<int>(b >> simplifier);
+  // const int modifiedNumerator = static_cast<int>(a >> simplifier);
+  // const int r = modifiedNumerator / modifiedDenominator;
 
-  constexpr int simplification = static_cast<int>((result3));
-  std::cout << simplification << std::endl;
-  Fraction modifiable = result;
-  modifiable = modifiable * result;
+  // constexpr int simplification = static_cast<int>((result3));
+  // std::cout << simplification << std::endl;
+  // Fraction modifiable = result;
+  // modifiable = modifiable * result;
 
   // std::cout << std::numeric_limits<uint64_t>::max() << std::endl;
   // std::cout << std::numeric_limits<double>::max() << std::endl;

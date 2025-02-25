@@ -5,7 +5,6 @@
 #include <stdexcept>
 
 
-
 class Fraction {
   typedef uint64_t int_t;
   typedef uint8_t sint_t;
@@ -13,6 +12,7 @@ class Fraction {
 public:
   constexpr Fraction();
   constexpr Fraction(int_t number);
+  constexpr Fraction(int_t numerator, int_t denominator, bool negative = false);
 
   constexpr Fraction(int n);
   constexpr Fraction(double n);
@@ -39,19 +39,21 @@ private:
   int_t denominator;
   sint_t sign;
   
-  static constexpr int_t zeroInt = 0;
   static constexpr int_t oneInt = 1;
-  static constexpr int_t maxInt = std::numeric_limits<int_t>::max();
-
+  static constexpr int_t maxInt = -1;
   static constexpr sint_t intSize = 64;
-  static constexpr sint_t positive = 0b00000000;
-  static constexpr sint_t negative = 0b10000000;
 
-  static constexpr sint_t signBit = 0b10000000;
-  static constexpr sint_t expBits = 0b01111111;
-  static constexpr sint_t expSignBit   = 0b01000000;
+  static constexpr sint_t signBit      = 0b01000000;
+  static constexpr sint_t expBits      = 0b10111111;
+  static constexpr sint_t expSignBit   = 0b10000000;
   static constexpr sint_t expValueBits = 0b00111111; // 2^((n^2+n)/2) multiplier
   
+  
+  static constexpr sint_t positive    = 0b00000000;
+  static constexpr sint_t negative    = 0b01000000;
+  static constexpr sint_t expNegative = 0b10000000;
+  static constexpr sint_t infinity    = 0b10000000;
+
   static constexpr int_t rightHalf = 0x00000000ffffffff;
   static constexpr int_t leftHalf  = 0xffffffff00000000;
 
@@ -68,4 +70,5 @@ private:
 
   constexpr Fraction(int_t numerator, int_t denominator, sint_t sign);
 };
+
 
